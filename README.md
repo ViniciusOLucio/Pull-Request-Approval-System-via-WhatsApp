@@ -10,6 +10,10 @@ Tecnologias: Laravel, WhatsApp Cloud API, GitHub API
 Passos Principais:
 
 [ ] Criar um Webhook que escute eventos pull_request
+
 [ ] Quando um PR for criado, enviar uma mensagem no WhatsApp
+
 [ ] Se o admin responder "Aprovar", chamar a API do GitHub para fazer merge
+
 [ ] Se responder "Rejeitar", fechar o PR automaticamente
+
