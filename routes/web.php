@@ -21,19 +21,13 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::post('/webhook', function (Request $request) {
-    // Log para verificar todos os cabeçalhos recebidos
-    Log::info('Cabeçalhos recebidos:', $request->headers->all());
-
     // Verifica se o evento GitHub foi enviado
     $githubEvent = $request->header('X-GitHub-Event');
-    Log::info('Evento recebido do GitHub:', ['event' => $githubEvent]);
 
     // Se o evento for de Pull Request
     if ($githubEvent === 'pull_request') {
         // Ação (opened, closed, etc.)
         $action = $request->input('action');
-        Log::info('Ação recebida do Pull Request:', ['action' => $action]);
-
         // Título do PR
         $prTitle = $request->input('pull_request.title');
         // URL do PR
@@ -57,6 +51,5 @@ Route::post('/webhook', function (Request $request) {
     // Responde com sucesso
     return response()->json(['status' => 'ok']);
 });
-
 
 require __DIR__.'/auth.php';
