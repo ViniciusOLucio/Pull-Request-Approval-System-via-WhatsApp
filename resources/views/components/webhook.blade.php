@@ -4,11 +4,18 @@
         <p>Por: {{ $pr->user }}</p>
         <a href="{{ $pr->url }}" target="_blank">Ver no GitHub</a>
 
-        <!-- Botões para merge ou fechar -->
-        <form action="{{ route('pr.action', $pr->id) }}" method="POST">
+        <!-- Formulário para adicionar comentário -->
+        <form action="{{ route('pr.addComment', $pr->id) }}" method="POST">
             @csrf
-            <button type="submit" name="action" value="merge">Aceitar e Fazer Merge</button>
-            <button type="submit" name="action" value="close">Recusar e Fechar</button>
+            <textarea name="comment" placeholder="Adicione um comentário..." required></textarea>
+            <button type="submit">Adicionar Comentário</button>
         </form>
     </div>
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
 @endforeach
