@@ -53,54 +53,34 @@ class WebhookController extends Controller
     // Método para processar o webhook (evento do GitHub)
     public function handleWebhook(Request $request)
     {
-        // Verifique se a requisição é válida e se contém o tipo de evento esperado
+        // Log para verificar o evento
+        Log::info("Evento GitHub: " . $request->header('X-GitHub-Event'));
+
         $event = $request->header('X-GitHub-Event');
+        $payload = json_decode($request->getContent(), true);
 
-        // Aqui você pode adicionar verificações para garantir que o evento seja válido
-        // Exemplo: verificar se o evento é de 'pull_request'
+        // Tratar PR aberto e fechado
         if ($event == 'pull_request') {
-            $payload = $request->getContent(); // Conteúdo do webhook
-            $data = json_decode($payload, true); // Decodificando o JSON
-
-            // Lógica para processar os dados do webhook, por exemplo, armazenar ou verificar
-            // Exemplo: verificar se o PR foi aberto ou fechado
-            if ($data['action'] == 'opened') {
-                // Ação para quando o PR for aberto
-                Log::info('PR aberto: ' . $data['pull_request']['title']);
-
-                // Criar ou atualizar o PR no banco de dados
-                PullRequest::updateOrCreate(
-                    ['pr_number' => $data['pull_request']['number']],  // Usar o número do PR como chave única
-                    [
-                        'title' => $data['pull_request']['title'],
-                        'user' => $data['pull_request']['user']['login'],
-                        'state' => 'opened',
-                        'url' => $data['pull_request']['html_url'],
-                    ]
-                );
-
-                // Exemplo: adicionar um comentário ao PR automaticamente
-                $comment = "Obrigado por abrir o PR! Vamos revisar em breve.";
-                $this->addComment($data['pull_request']['id'], new Request(['comment' => $comment]));
-            } elseif ($data['action'] == 'closed') {
-                // Ação para quando o PR for fechado
-                Log::info('PR fechado: ' . $data['pull_request']['title']);
-
-                // Atualizar o estado do PR para fechado no banco de dados
-                $pr = PullRequest::where('pr_number', $data['pull_request']['number'])->first();
-                if ($pr) {
-                    $pr->state = 'closed';
-                    $pr->save();
-                }
+            if ($payload['action'] == 'opened') {
+                Log::info('PR aberto: ' . $payload['pull_request']['title']);
+            } elseif ($payload['action'] == 'closed') {
+                Log::info('PR fechado: ' . $payload['pull_request']['title']);
             }
-
-            // Retorne uma resposta indicando que o evento foi processado
-            return response()->json(['message' => 'Evento processado']);
         }
 
-        // Caso o evento não seja um pull request ou outro evento relevante
-        return response()->json(['message' => 'Evento ignorado'], 400);
+        // Tratar comentário de issue ou PR
+        elseif ($event == 'issue_comment') {
+            Log::info('Comentário no PR #'.$payload['issue']['number'].': ' . $payload['comment']['body']);
+        }
+
+        // Para outros eventos, pode registrar ou tratar como necessário
+        else {
+            Log::info('Evento ignorado: ' . $event);
+        }
+
+        return response()->json(['message' => 'Evento processado']);
     }
+
 
     // Método para exibir os dados dos PRs (para visualização)
     public function showWebhookData()
