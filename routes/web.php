@@ -21,14 +21,22 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 });
+
+
+
+//rota para view do webhook
 Route::get('/webhook-data-show  ', [WebhookController::class, 'showWebhookData']);
 
+
+//rota para puxar os dados em webhook
 Route::match(['get', 'post'], '/webhook', [WebhookController::class, 'handleWebhook']);
 
 
+// Rota para marge/close ao PR
+Route::post('/pr/action/{id}', [WebhookController::class, 'handlePRAction'])->name('pr.action');
+
 // Rota para adicionar o comentário ao PR
 Route::post('/pr/{id}/comment', [WebhookController::class, 'addComment'])->name('pr.addComment');
-
 
 
 

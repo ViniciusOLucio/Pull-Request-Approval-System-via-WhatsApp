@@ -7,59 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-// IMPORTANTE!
-
 class WebhookController extends Controller
 {
-
-    public function handlePRAction($id, Request $request)
-    {
-        $pr = PullRequest::findOrFail($id);
-        $action = $request->input('action');
-
-        Log::info("PR encontrado: " . $pr->id . " - Número do PR: " . $pr->pr_number . " - Ação: " . $action);
-
-        $repoOwner = 'ViniciusOLucio';
-        $repoName = 'Pull-Request-Approval-System-via-WhatsApp';
-        $pullNumber = $pr->pr_number;  // Certifique-se de que isso está correto
-
-        $token = env('GITHUB_TOKEN');
-
-        if ($action === 'merge') {
-            // Chamada para fazer merge do PR
-            Log::info("Iniciando o merge do PR #{$pullNumber}");
-            $response = Http::withToken($token)
-                ->post("https://api.github.com/repos/{$repoOwner}/{$repoName}/pulls/{$pullNumber}/merge", [
-                    'commit_title' => 'Merge via sistema',
-                    'commit_message' => 'Merge automático realizado via sistema',
-                    'merge_method' => 'merge' // ou 'squash' / 'rebase'
-                ]);
-        } elseif ($action === 'close') {
-            // Chamada para fechar o PR sem merge
-            Log::info("Fechando o PR #{$pullNumber}");
-            $response = Http::withToken($token)
-                ->patch("https://api.github.com/repos/{$repoOwner}/{$repoName}/pulls/{$pullNumber}", [
-                    'state' => 'closed'
-                ]);
-        }
-
-        // Adicionando um log para ver a resposta
-        Log::info("Resposta da API GitHub: " . $response->body());
-
-        if ($response->successful()) {
-            // Atualiza o estado do PR no banco de dados
-            $pr->state = ($action === 'merge') ? 'merged' : 'closed';
-            $pr->save();
-
-            return redirect()->back()->with('success', 'Ação realizada com sucesso!');
-        } else {
-            // Mostrar o erro se não for bem-sucedido
-            Log::error("Erro ao tentar realizar a ação: " . $response->body());
-
-            return redirect()->back()->with('error', 'Erro ao realizar a ação.');
-        }
-    }
-
+    // Método para adicionar um comentário ao PR
     public function addComment($id, Request $request)
     {
         // Recuperar o PR com base no ID
@@ -100,32 +50,59 @@ class WebhookController extends Controller
         }
     }
 
-
-
-
+    // Método para processar o webhook (evento do GitHub)
     public function handleWebhook(Request $request)
     {
-        if ($request->header('X-GitHub-Event') === 'pull_request') {
-            $data = $request->all();
+        // Verifique se a requisição é válida e se contém o tipo de evento esperado
+        $event = $request->header('X-GitHub-Event');
 
-            // Pega o número do PR e o título
-            $prNumber = $data['pull_request']['number'];
-            $prTitle = $data['pull_request']['title'];
+        // Aqui você pode adicionar verificações para garantir que o evento seja válido
+        // Exemplo: verificar se o evento é de 'pull_request'
+        if ($event == 'pull_request') {
+            $payload = $request->getContent(); // Conteúdo do webhook
+            $data = json_decode($payload, true); // Decodificando o JSON
 
-            // Agora, vamos adicionar um comentário dizendo algo como "PR aberto!"
-            $comment = "PR aberto: {$prTitle}. Aguardando revisão.";
+            // Lógica para processar os dados do webhook, por exemplo, armazenar ou verificar
+            // Exemplo: verificar se o PR foi aberto ou fechado
+            if ($data['action'] == 'opened') {
+                // Ação para quando o PR for aberto
+                Log::info('PR aberto: ' . $data['pull_request']['title']);
 
-            // Adiciona o comentário ao PR
-            $this->addCommentToPR($prNumber, $comment);
+                // Criar ou atualizar o PR no banco de dados
+                PullRequest::updateOrCreate(
+                    ['pr_number' => $data['pull_request']['number']],  // Usar o número do PR como chave única
+                    [
+                        'title' => $data['pull_request']['title'],
+                        'user' => $data['pull_request']['user']['login'],
+                        'state' => 'opened',
+                        'url' => $data['pull_request']['html_url'],
+                    ]
+                );
 
-            return response()->json(['message' => 'Webhook processado']);
+                // Exemplo: adicionar um comentário ao PR automaticamente
+                $comment = "Obrigado por abrir o PR! Vamos revisar em breve.";
+                $this->addComment($data['pull_request']['id'], new Request(['comment' => $comment]));
+            } elseif ($data['action'] == 'closed') {
+                // Ação para quando o PR for fechado
+                Log::info('PR fechado: ' . $data['pull_request']['title']);
+
+                // Atualizar o estado do PR para fechado no banco de dados
+                $pr = PullRequest::where('pr_number', $data['pull_request']['number'])->first();
+                if ($pr) {
+                    $pr->state = 'closed';
+                    $pr->save();
+                }
+            }
+
+            // Retorne uma resposta indicando que o evento foi processado
+            return response()->json(['message' => 'Evento processado']);
         }
 
-        return response()->json(['message' => 'Evento ignorado'], 200);
+        // Caso o evento não seja um pull request ou outro evento relevante
+        return response()->json(['message' => 'Evento ignorado'], 400);
     }
 
-
-
+    // Método para exibir os dados dos PRs (para visualização)
     public function showWebhookData()
     {
         // Recupera todos os Pull Requests armazenados
@@ -134,10 +111,4 @@ class WebhookController extends Controller
         // Passa os dados para a view
         return view('components.webhook', compact('pullRequests'));
     }
-
-
-
-
-
-
 }
