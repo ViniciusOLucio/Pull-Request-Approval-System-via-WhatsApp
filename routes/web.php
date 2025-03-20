@@ -21,6 +21,12 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 });
-Route::post('/webhook', [WebhookController::class, 'handleWebhook']);
+Route::get('/webhook-data-show  ', [WebhookController::class, 'showWebhookData']);
+
+Route::match(['get', 'post'], '/webhook', [WebhookController::class, 'handleWebhook']);
+
+
+
+
 
 require __DIR__.'/auth.php';
