@@ -26,6 +26,8 @@ Route::get('/webhook-data-show  ', [WebhookController::class, 'showWebhookData']
 Route::match(['get', 'post'], '/webhook', [WebhookController::class, 'handleWebhook']);
 
 
+Route::post('/pull-requests/{id}/action', [WebhookController::class, 'handlePRAction'])->name('pr.action');
+
 
 
 

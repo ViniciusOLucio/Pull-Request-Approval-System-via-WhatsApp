@@ -9,5 +9,6 @@ class PullRequest extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title', 'user', 'url', 'state'];
+    protected $fillable = ['title', 'user', 'url', 'state', 'pr_number'];
+
 }

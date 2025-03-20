@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('user');
             $table->string('url');
             $table->string('state');
+            $table->smallInteger('pr_number')->nullable();
             $table->timestamps();
         });
     }
