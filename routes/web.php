@@ -24,13 +24,14 @@ Route::middleware(['auth'])->group(function () {
 
 
 
-//rota para view do webhook
-Route::get('/webhook-data-show  ', [WebhookController::class, 'showWebhookData']);
+
 
 
 //rota para puxar os dados em webhook
 Route::match(['get', 'post'], '/webhook', [WebhookController::class, 'handleWebhook']);
 
+//rota para view do webhook
+Route::get('/webhook-data-show  ', [WebhookController::class, 'showWebhookData']);
 
 // Rota para marge/close ao PR
 Route::post('/pr/action/{id}', [WebhookController::class, 'handlePRAction'])->name('pr.action');
